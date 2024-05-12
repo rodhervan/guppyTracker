@@ -34,7 +34,7 @@ Create the virtual environment and activate it
 ```bash
    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
-You can check the different versions and options at https://pytorch.org/get-started/locally/
+   You can check the different versions and options at https://pytorch.org/get-started/locally/
 
 - Install the other prerquisite libraries
 ```bash
