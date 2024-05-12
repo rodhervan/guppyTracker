@@ -11,7 +11,8 @@ import time
 
 
 model_path = 'Train_data/segment/train4/weights/best.pt'
-video_path = 'Videos/Pez3_con_campo.mp4'
+# video_path = 'Videos/Pez1_con_campo.mp4'
+video_path = 'Videos/sample.mp4'
 
 # Initialize YOLO model
 model = YOLO(model_path)
@@ -24,8 +25,8 @@ if not cap.isOpened():
     print("Error opening video file")
     exit()
 
-# Set the start time to 90 seconds (90000 milliseconds)
-start_time_ms = 240000
+# Set the start time in miliseconds (i.e. 1:35 is 95000)
+start_time_ms = 0
 cap.set(cv2.CAP_PROP_POS_MSEC, start_time_ms)
 
 # Get the frame rate of the video
@@ -130,6 +131,25 @@ cv2.destroyAllWindows()
 # for frame_data in frames_data:
 #     print(frame_data)
 
-os.makedirs('Generated_data', exist_ok=True)
-with open('Generated_data/Fish_data.json', 'w', encoding='utf-8') as f:
+output_dir = 'Generated_data'
+os.makedirs(output_dir, exist_ok=True)
+
+file_name = 'Fish_data.json'
+output_path = os.path.join(output_dir, file_name)
+
+# Check if the file already exists
+file_exists = os.path.isfile(output_path)
+
+if file_exists:
+    # If the file exists, find a unique name by adding a number at the end
+    file_count = 1
+    while True:
+        new_file_name = f'Fish_data_{file_count}.json'
+        new_output_path = os.path.join(output_dir, new_file_name)
+        if not os.path.isfile(new_output_path):
+            output_path = new_output_path
+            break
+        file_count += 1
+
+with open(output_path, 'w', encoding='utf-8') as f:
     json.dump(frames_data, f, ensure_ascii=False, indent=4)
