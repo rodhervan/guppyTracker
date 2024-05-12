@@ -30,13 +30,13 @@ Create the virtual environment and activate it
 ```bash
    cd  path/to/project/guppyTracker
 ```
-(OPTIONAL) If using a CUDA GPU to speed up the inference time, make sure to install the corresponding pytorch library. For example for CUDA version 11.8 execute the command:
+- (OPTIONAL) If using a CUDA GPU to speed up the inference time, make sure to install the corresponding pytorch library. For example for CUDA version 11.8 execute the command:
 ```bash
    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
 You can check the different versions and options at https://pytorch.org/get-started/locally/
 
-Install the other prerquisite libraries
+- Install the other prerquisite libraries
 ```bash
    pip install -r requirements.txt
 ```
