@@ -50,5 +50,14 @@ The file yoloPredict.py loads an `.mp4` video and extracts the position of the f
 #### JSON File structure
 
 The `.JSON` file contains a list of dictionaries, where each item in this list corresponds to a single frame. In each frame the following data will be stored under the following keys:
-´"frame_number"´: Contains an integer, where the first frame will start as 0 and increase by 1 for each frame.
+-`"frame_number"`: Contains an integer, where the first frame will start as 0 and increase by 1 for each frame.
+-`"timestamp"`: This value corresponds to the current time when the detection was done. It saves the data in a string as `YYYY-MM-dd HH:MM:SS:fffff`.
+-`"video_timestamp"`: This value is the timestamp of the video, indendent from the start position, it has a structure of `HH:MM:SS:fff`.
+-`"detected"`: If a fish was detected in the current frame this boolean value will be set to True, False otherwise.
+-`"centroids"`: This value is a list of floats containing the x and y coordinates of the detected fish (in units pixels).
+-`"velocity"`: Similar to centroids it is a list of floats that contains the x and y components of the velocity vector of a fish (it is computed on consecutive frames). 
+-`"distance"`: This is a single float value, indicating the distance moved in between frames. 
+
+### Heat map
+The data generated from the `.JSON` file can be read in the heatmap.ipynb notebook. In this notebook a sample image is loaded as background (but should be replaced for different videos). The position of the fish gets used to generate a heatmap and show on top of this image the places where the fish was more frequently at during the test. 
 
