@@ -36,12 +36,19 @@ Create the virtual environment and activate it
 ```
    You can check the different versions and options at https://pytorch.org/get-started/locally/
 
-- Install the other prerquisite libraries
+4. Install the other prerquisite libraries
 ```bash
    pip install -r requirements.txt
 ```
 
 ## Usage
 
-### Naming convention and files
+### Loading a video
+
+The file yoloPredict.py loads an `.mp4` video and extracts the position of the fish using a YOLOv8 segmentation model. A pretrained model for this project is located inside the Train_data folder; traning models end in a `.pt` extension. To set the start time to something different than cero change the variable `start_time_ms` to a different value in miliseconds. This code will initiate a window showing the video an will put a green polygon to indicate the outline of the fish; a blue circle will indicate the centroid of this polygon. This window will continue to reproduce the video until it ends; to stop the video playback press the letter `Q`. Once the video playback ends and `.JSON` file will be generated containing the data extracted from the video. 
+
+#### JSON File structure
+
+The `.JSON` file contains a list of dictionaries, where each item in this list corresponds to a single frame. In each frame the following data will be stored under the following keys:
+´"frame_number"´: Contains an integer, where the first frame will start as 0 and increase by 1 for each frame.
 
