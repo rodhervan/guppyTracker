@@ -24,7 +24,7 @@ Create the virtual environment and activate it
 ```
 2. Clone this repository
 ```bash
-   git clone https://https://github.com/rodhervan/guppyTracker
+   git clone https://github.com/rodhervan/guppyTracker
 ```
 3. Navigate to the project directory
 ```bash
@@ -52,7 +52,7 @@ The file yoloPredict.py loads an `.mp4` video and extracts the position of the f
 The `.JSON` file contains a list of dictionaries, where each item in this list corresponds to a single frame. In each frame the following data will be stored under the following keys:
 - `"frame_number"`: Contains an integer, where the first frame will start as 0 and increase by 1 for each frame.
 - `"timestamp"`: This value corresponds to the current time when the detection was done. It saves the data in a string as `YYYY-MM-dd HH:MM:SS:fffff`.
-- `"video_timestamp"`: This value is the timestamp of the video, indendent from the start position, it has a structure of `HH:MM:SS:fff`.
+- `"video_timestamp"`: This value is the timestamp of the video, independent from the start position, it has a structure of `HH:MM:SS:fff`.
 - `"detected"`: If a fish was detected in the current frame this boolean value will be set to True, False otherwise.
 - `"centroids"`: This value is a list of floats containing the x and y coordinates of the detected fish (in units pixels).
 - `"velocity"`: Similar to centroids it is a list of floats that contains the x and y components of the velocity vector of a fish (it is computed on consecutive frames). 
