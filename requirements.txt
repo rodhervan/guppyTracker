@@ -6,4 +6,4 @@ pandas
 shapely
 ultralytics
 streamlit
---upgrade pillow
+pillow
