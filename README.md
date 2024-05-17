@@ -19,8 +19,8 @@ The following steps indicate how to set up the code on a local machine.
 ```
 Create the virtual environment and activate it
 ```bash
-   python -m venv guppyTracker
-   guppyTracker\Scripts\activate
+   python -m venv guppyEnv
+   guppyEnv\Scripts\activate
 ```
 2. Clone this repository
 ```bash
