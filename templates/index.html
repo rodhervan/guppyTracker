@@ -21,6 +21,9 @@
         #controls {
             margin-top: 20px;
         }
+        .graph-container {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -33,9 +36,10 @@
             <input type="file" id="video-file" accept="video/*">
             <button type="submit">Start</button>
         </form>
-        <button id="stop-button">Stop and save</button>
+        <button id="stop-button">Stop</button>
     </div>
     <div id="message"></div>
+    <div id="graph-container" class="graph-container"></div>
     <script>
         const socket = io();
 
@@ -84,6 +88,16 @@
         socket.on('saved', (data) => {
             const messageDiv = document.getElementById('message');
             messageDiv.innerText = data.message;
+
+            const graphContainer = document.getElementById('graph-container');
+            graphContainer.innerHTML = '';
+            data.graphs.forEach(graph => {
+                const img = document.createElement('img');
+                img.src = `/graphs/${graph}`;
+                img.alt = 'Graph';
+                img.style = 'width: 640px; height: 480px;';
+                graphContainer.appendChild(img);
+            });
         });
     </script>
 </body>

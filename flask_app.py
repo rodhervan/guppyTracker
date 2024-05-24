@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit
 from ultralytics import YOLO
 from PIL import Image, ImageDraw, ImageFont
@@ -10,6 +10,7 @@ import json
 import numpy as np
 import base64
 import tempfile
+import matplotlib.pyplot as plt
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -23,6 +24,7 @@ prev_centroid = None
 prev_time = None
 cap = None
 stop_processing = False
+last_json_path = ''
 
 @app.route('/')
 def index():
@@ -131,9 +133,12 @@ def start_video(data):
 
 @socketio.on('stop_video')
 def stop_video():
-    global stop_processing
+    global stop_processing, last_json_path
     stop_processing = True
-    save_json()
+    json_path = save_json()
+    last_json_path = json_path
+    graphs = generate_graphs(json_path)
+    emit('saved', {'message': f'Data saved to {json_path}', 'graphs': graphs})
 
 def save_json():
     output_dir = 'Generated_data'
@@ -157,7 +162,106 @@ def save_json():
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(frames_data, f, ensure_ascii=False, indent=4)
 
-    emit('saved', {'message': f'Data saved to {output_path}'})
+    return output_path
+
+def generate_graphs(json_path):
+    # Load JSON data
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+
+    output_dir = 'Generated_data'
+    graphs = []
+
+    # Plot 1: Detected Object Positions
+    detected_data = [item['centroids'][0] for item in data if item.get('detected') and 'centroids' in item]
+    if detected_data:
+        x_positions = [centroid[0] for centroid in detected_data]
+        y_positions = [centroid[1] for centroid in detected_data]
+
+        image = cv2.imread('blend_test.png')
+        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        plt.scatter(x_positions, y_positions, color='red', marker='.', s=10)
+        plt.xlabel('Y Position')
+        plt.ylabel('X Position')
+        plt.title('Detected Object Positions')
+        plt.grid(True)
+        plot_path = os.path.join(output_dir, 'positions_plot.png')
+        plt.savefig(plot_path)
+        plt.close()
+        graphs.append('positions_plot.png')
+
+    # Plot 2: Detected Object Heatmap
+    if detected_data:
+        heatmap, xedges, yedges = np.histogram2d(x_positions, y_positions, bins=30)
+        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        plt.imshow(heatmap.T, extent=[xedges[0], xedges[-1], yedges[-1], yedges[0]], alpha=0.8, cmap='hot')
+        plt.colorbar(label='Frequency')
+        plt.xlabel('Y Position')
+        plt.ylabel('X Position')
+        plt.title('Detected Object Heatmap')
+        plot_path = os.path.join(output_dir, 'heatmap_plot.png')
+        plt.savefig(plot_path)
+        plt.close()
+        graphs.append('heatmap_plot.png')
+
+    # Plot 3: Velocity Magnitude vs Time
+    timestamps = []
+    velocities = []
+    for item in data:
+        if item.get('detected') and 'velocity' in item:
+            velocity = item['velocity']
+            if len(velocity) == 2:
+                timestamps.append(item['timestamp'])
+                velocities.append(velocity)
+
+    if timestamps and velocities:
+        time_format = '%Y-%m-%d %H:%M:%S:%f'
+        timestamps_dt = [datetime.strptime(timestamp, time_format) for timestamp in timestamps]
+        start_time = timestamps_dt[0]
+        timestamps_in_seconds = [(timestamp - start_time).total_seconds() for timestamp in timestamps_dt]
+        vel_magnitudes = [np.sqrt(velocity[0]**2 + velocity[1]**2) for velocity in velocities]
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(timestamps_in_seconds, vel_magnitudes, marker='o')
+        plt.xlabel('Time (seconds)')
+        plt.ylabel('Velocity Magnitude')
+        plt.title('Velocity Magnitude vs Time')
+        plt.grid(True)
+        plot_path = os.path.join(output_dir, 'velocity_plot.png')
+        plt.savefig(plot_path)
+        plt.close()
+        graphs.append('velocity_plot.png')
+
+    # Plot 4: Distance vs Time
+    timestamps = []
+    distances = []
+    for item in data:
+        if item.get('detected') and 'distance' in item:
+            timestamps.append(item['timestamp'])
+            distances.append(item['distance'])
+
+    if timestamps and distances:
+        time_format = '%Y-%m-%d %H:%M:%S:%f'
+        timestamps_dt = [datetime.strptime(timestamp, time_format) for timestamp in timestamps]
+        start_time = timestamps_dt[0]
+        timestamps_in_seconds = [(timestamp - start_time).total_seconds() for timestamp in timestamps_dt]
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(timestamps_in_seconds, distances, marker='o')
+        plt.xlabel('Time (seconds)')
+        plt.ylabel('Distance')
+        plt.title('Distance vs Time')
+        plt.grid(True)
+        plot_path = os.path.join(output_dir, 'distance_plot.png')
+        plt.savefig(plot_path)
+        plt.close()
+        graphs.append('distance_plot.png')
+
+    return graphs
+
+@app.route('/graphs/<filename>')
+def send_graph(filename):
+    return send_from_directory('Generated_data', filename)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
