@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Processor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #video-container {
+            display: inline-block;
+            position: relative;
+        }
+        #video-frame {
+            width: 640px;
+            height: 480px;
+        }
+        #controls {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Video Processor</h1>
+    <div id="video-container">
+        <img id="video-frame" src="" alt="Video Frame">
+    </div>
+    <div id="controls">
+        <form id="upload-form">
+            <input type="file" id="video-file" accept="video/*">
+            <button type="submit">Start</button>
+        </form>
+        <button id="stop-button">Stop and save</button>
+    </div>
+    <div id="message"></div>
+    <script>
+        const socket = io();
+
+        document.getElementById('upload-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('video-file');
+            if (fileInput.files.length === 0) {
+                alert('Please select a video file.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('video', fileInput.files[0]);
+
+            fetch('/upload_video', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    socket.emit('start_video', { video_path: data.video_path });
+                } else {
+                    alert('Failed to upload video.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        document.getElementById('stop-button').addEventListener('click', () => {
+            socket.emit('stop_video');
+        });
+
+        socket.on('frame', (data) => {
+            const img = document.getElementById('video-frame');
+            img.src = 'data:image/jpeg;base64,' + data.frame;
+        });
+
+        socket.on('error', (data) => {
+            alert(data.message);
+        });
+
+        socket.on('saved', (data) => {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerText = data.message;
+        });
+    </script>
+</body>
+</html>
