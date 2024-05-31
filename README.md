@@ -1,5 +1,3 @@
-# guppyTracker
-
 ![alt text](https://github.com/rodhervan/guppyTracker/blob/main/static/banner.png)
 
 This repository constains the code necessary for tracking guppy fishes and obtaining their position, distance and velocity.
