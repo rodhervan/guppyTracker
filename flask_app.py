@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit
 from ultralytics import YOLO
@@ -40,6 +42,18 @@ def upload_video():
     video_file.save(temp_file.name)
 
     return jsonify(success=True, video_path=temp_file.name)
+
+@app.route('/upload_json', methods=['POST'])
+def upload_json():
+    if 'json' not in request.files:
+        return jsonify(success=False), 400
+
+    json_file = request.files['json']
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.json')
+    json_file.save(temp_file.name)
+
+    graphs = generate_graphs(temp_file.name)
+    return jsonify(success=True, graphs=graphs)
 
 @socketio.on('start_video')
 def start_video(data):
@@ -133,10 +147,9 @@ def start_video(data):
 
 @socketio.on('stop_video')
 def stop_video():
-    global stop_processing, last_json_path
+    global stop_processing
     stop_processing = True
     json_path = save_json()
-    last_json_path = json_path
     graphs = generate_graphs(json_path)
     emit('saved', {'message': f'Data saved to {json_path}', 'graphs': graphs})
 

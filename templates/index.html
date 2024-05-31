@@ -14,14 +14,19 @@
             text-align: center;
             background-color: #f8f9fa;
         }
+        #banner {
+            width: 60%;
+            height: auto;
+            margin: 20px 0;
+        }
         #video-frame {
-            width: 100%;
-            max-width: 640px;
+            width: 50%;
             height: auto;
             margin: 20px auto;
             border: 1px solid #ddd;
             border-radius: 5px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: width 0.3s ease;
         }
         #controls {
             margin-top: 20px;
@@ -42,18 +47,29 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="mt-5 mb-4">Video Processor</h1>
+        <img id="banner" src="{{ url_for('static', filename='banner.png') }}" alt="App Banner">
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div id="video-container">
-                    <img id="video-frame" src="" alt="Video Frame" class="img-fluid">
+                    <img id="video-frame" src="{{ url_for('static', filename='GuppyTrackerLogo.png') }}" alt="Video Frame" class="img-fluid">
                 </div>
                 <div id="controls" class="mt-4">
-                    <form id="upload-form" class="d-flex justify-content-center">
-                        <input type="file" id="video-file" accept="video/*" class="form-control" style="max-width: 300px;">
-                        <button type="submit" class="btn btn-primary ms-2">Start</button>
-                    </form>
-                    <button id="stop-button" class="btn btn-danger mt-3">Stop</button>
+                    <div class="mb-3 text-start">
+                        <label for="video-file" class="form-label">Select your video</label>
+                        <form id="upload-form" class="d-flex">
+                            <input type="file" id="video-file" accept="video/*" class="form-control" style="max-width: 300px;">
+                            <button type="submit" class="btn btn-primary ms-2">Start</button>
+                            <button id="stop-button" class="btn btn-danger ms-2">Stop</button>
+                        </form>
+                    </div>
+                    <div class="mb-3 text-start">
+                        <label for="json-file" class="form-label">Select a JSON file</label>
+                        <form id="upload-json-form" class="d-flex">
+                            <input type="file" id="json-file" accept=".json" class="form-control" style="max-width: 300px;">
+                            <button type="submit" class="btn btn-secondary ms-2">Load JSON</button>
+                            <button id="clear-button" class="btn btn-warning ms-2">Clear</button>
+                        </form>
+                    </div>
                 </div>
                 <div id="message" class="mt-4"></div>
                 <div id="graph-container" class="graph-container mt-4"></div>
@@ -92,13 +108,61 @@
             });
         });
 
-        document.getElementById('stop-button').addEventListener('click', () => {
+        document.getElementById('stop-button').addEventListener('click', (e) => {
+            e.preventDefault();  // Prevent the default form submission behavior
             socket.emit('stop_video');
         });
+
+        document.getElementById('upload-json-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('json-file');
+            if (fileInput.files.length === 0) {
+                alert('Please select a JSON file.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('json', fileInput.files[0]);
+
+            fetch('/upload_json', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const graphContainer = document.getElementById('graph-container');
+                    graphContainer.innerHTML = '';  // Clear existing graphs
+                    data.graphs.forEach(graph => {
+                        const img = document.createElement('img');
+                        img.src = `/graphs/${graph}?t=${new Date().getTime()}`;  // Add timestamp to avoid caching
+                        img.alt = 'Graph';
+                        graphContainer.appendChild(img);
+                    });
+                } else {
+                    alert('Failed to upload JSON.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        document.getElementById('clear-button').addEventListener('click', (e) => {
+            e.preventDefault();
+            clearGraphs();
+        });
+
+        function clearGraphs() {
+            const graphContainer = document.getElementById('graph-container');
+            graphContainer.innerHTML = '';
+        }
 
         socket.on('frame', (data) => {
             const img = document.getElementById('video-frame');
             img.src = 'data:image/jpeg;base64,' + data.frame;
+            img.style.width = '150%';  // Increase size to 150%
         });
 
         socket.on('error', (data) => {
@@ -111,10 +175,10 @@
             messageDiv.className = 'alert alert-success';
 
             const graphContainer = document.getElementById('graph-container');
-            graphContainer.innerHTML = '';
+            graphContainer.innerHTML = '';  // Clear existing graphs
             data.graphs.forEach(graph => {
                 const img = document.createElement('img');
-                img.src = `/graphs/${graph}`;
+                img.src = `/graphs/${graph}?t=${new Date().getTime()}`;  // Add timestamp to avoid caching
                 img.alt = 'Graph';
                 graphContainer.appendChild(img);
             });
