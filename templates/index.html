@@ -11,24 +11,31 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
 </head>
 <body>
+    <div class="top-bar">
+        <div class="top-bar-content">
+            <img id="logo" src="{{ url_for('static', filename='logo.png') }}" alt="App Logo">
+            <img id="banner" src="{{ url_for('static', filename='banner.png') }}" alt="App Banner">
+        </div>
+    </div>
     <div class="container">
-        <img id="banner" src="{{ url_for('static', filename='banner.png') }}" alt="App Banner">
         <div class="row justify-content-center">
             <div class="col-md-8">
-                <div id="video-container">
-                    <img id="video-frame" src="{{ url_for('static', filename='GuppyTrackerLogo.png') }}" alt="Video Frame" class="img-fluid">
-                </div>
                 <div id="controls" class="mt-4">
                     <div class="mb-3 text-start">
-                        <label for="video-file" class="form-label">Select your video</label>
+                        <label for="video-file" class="form-label">Select the video you want to process:</label>
                         <form id="upload-form" class="d-flex">
                             <input type="file" id="video-file" accept="video/*" class="form-control" style="max-width: 300px;">
                             <button type="submit" class="btn btn-primary ms-2">Start</button>
                             <button id="stop-button" class="btn btn-danger ms-2">Stop</button>
                         </form>
                     </div>
+                </div>
+                <div id="video-container" class="mt-4">
+                    <img id="video-frame" src="{{ url_for('static', filename='GuppyTrackerLogo.png') }}" alt="Video Frame" class="img-fluid">
+                </div>
+                <div id="controls" class="mt-4">
                     <div class="mb-3 text-start">
-                        <label for="json-file" class="form-label">Select a JSON file</label>
+                        <label for="json-file" class="form-label">Generate graphs from a JSON file or convert them to CSV/Excel format:</label>
                         <div class="d-flex">
                             <input type="file" id="json-file" name="json" accept=".json" class="form-control" style="max-width: 300px;">
                             <button id="generate-graphs-button" class="btn btn-secondary ms-2">Generate graphs</button>
