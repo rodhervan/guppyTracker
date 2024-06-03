@@ -47,6 +47,10 @@ Create the virtual environment and activate it
 
 ## Usage
 
+### Using the App
+
+To use the app run the App.py file, then open your web browser and go to http://localhost:5000. 
+
 ### Loading a video
 
 The file yoloPredict.py loads an `.mp4` video and extracts the position of the fish using a YOLOv8 segmentation model. A pretrained model for this project is located inside the Train_data folder; traning models end in a `.pt` extension. To set the start time to something different than cero change the variable `start_time_ms` to a different value in miliseconds. This code will initiate a window showing the video an will put a green polygon to indicate the outline of the fish; a blue circle will indicate the centroid of this polygon. This window will continue to reproduce the video until it ends; to stop the video playback press the letter `Q`. Once the video playback ends and `.JSON` file will be generated containing the data extracted from the video. 
