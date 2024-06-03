@@ -5,45 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Processor</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #f8f9fa;
-        }
-        #banner {
-            width: 60%;
-            height: auto;
-            margin: 20px 0;
-        }
-        #video-frame {
-            width: 50%;
-            height: auto;
-            margin: 20px auto;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            transition: width 0.3s ease;
-        }
-        #controls {
-            margin-top: 20px;
-        }
-        .graph-container {
-            margin-top: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .graph-container img {
-            width: 100%;
-            max-width: 640px;
-            height: auto;
-            margin: 10px;
-        }
-    </style>
 </head>
 <body>
     <div class="container">
@@ -64,125 +29,28 @@
                     </div>
                     <div class="mb-3 text-start">
                         <label for="json-file" class="form-label">Select a JSON file</label>
-                        <form id="upload-json-form" class="d-flex">
-                            <input type="file" id="json-file" accept=".json" class="form-control" style="max-width: 300px;">
-                            <button type="submit" class="btn btn-secondary ms-2">Load JSON</button>
+                        <div class="d-flex">
+                            <input type="file" id="json-file" name="json" accept=".json" class="form-control" style="max-width: 300px;">
+                            <button id="generate-graphs-button" class="btn btn-secondary ms-2">Generate graphs</button>
                             <button id="clear-button" class="btn btn-warning ms-2">Clear</button>
-                        </form>
+                        </div>
                     </div>
+                    <div class="mb-3 text-start">
+                        <label class="form-label">Save as:</label>
+                        <div class="d-flex">
+                            <button id="save-csv-button" class="btn btn-success ms-2">CSV</button>
+                            <button id="save-excel-button" class="btn btn-success ms-2">Excel</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="spinner-border text-primary" id="loading-spinner" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
                 <div id="message" class="mt-4"></div>
                 <div id="graph-container" class="graph-container mt-4"></div>
             </div>
         </div>
     </div>
-    <script>
-        const socket = io();
-
-        document.getElementById('upload-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            const fileInput = document.getElementById('video-file');
-            if (fileInput.files.length === 0) {
-                alert('Please select a video file.');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('video', fileInput.files[0]);
-
-            fetch('/upload_video', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    socket.emit('start_video', { video_path: data.video_path });
-                } else {
-                    alert('Failed to upload video.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        });
-
-        document.getElementById('stop-button').addEventListener('click', (e) => {
-            e.preventDefault();  // Prevent the default form submission behavior
-            socket.emit('stop_video');
-        });
-
-        document.getElementById('upload-json-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            const fileInput = document.getElementById('json-file');
-            if (fileInput.files.length === 0) {
-                alert('Please select a JSON file.');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('json', fileInput.files[0]);
-
-            fetch('/upload_json', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const graphContainer = document.getElementById('graph-container');
-                    graphContainer.innerHTML = '';  // Clear existing graphs
-                    data.graphs.forEach(graph => {
-                        const img = document.createElement('img');
-                        img.src = `/graphs/${graph}?t=${new Date().getTime()}`;  // Add timestamp to avoid caching
-                        img.alt = 'Graph';
-                        graphContainer.appendChild(img);
-                    });
-                } else {
-                    alert('Failed to upload JSON.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        });
-
-        document.getElementById('clear-button').addEventListener('click', (e) => {
-            e.preventDefault();
-            clearGraphs();
-        });
-
-        function clearGraphs() {
-            const graphContainer = document.getElementById('graph-container');
-            graphContainer.innerHTML = '';
-        }
-
-        socket.on('frame', (data) => {
-            const img = document.getElementById('video-frame');
-            img.src = 'data:image/jpeg;base64,' + data.frame;
-            img.style.width = '150%';  // Increase size to 150%
-        });
-
-        socket.on('error', (data) => {
-            alert(data.message);
-        });
-
-        socket.on('saved', (data) => {
-            const messageDiv = document.getElementById('message');
-            messageDiv.innerText = data.message;
-            messageDiv.className = 'alert alert-success';
-
-            const graphContainer = document.getElementById('graph-container');
-            graphContainer.innerHTML = '';  // Clear existing graphs
-            data.graphs.forEach(graph => {
-                const img = document.createElement('img');
-                img.src = `/graphs/${graph}?t=${new Date().getTime()}`;  // Add timestamp to avoid caching
-                img.alt = 'Graph';
-                graphContainer.appendChild(img);
-            });
-        });
-    </script>
+    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
 </body>
 </html>

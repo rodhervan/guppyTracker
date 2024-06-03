@@ -1,172 +1,92 @@
-import streamlit as st
-from ultralytics import YOLO
-from PIL import Image, ImageDraw, ImageFont
-from shapely.geometry import Polygon
-from datetime import datetime
-import cv2
-import os
-import json
-import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask_socketio import SocketIO, emit
+from generate_data import save_json, generate_graphs, save_csv, save_excel, generate_dataframe  # Import the functions
+from processVideoYolo import start_video_processing, stop_video_processing  # Import the functions
 import tempfile
+import os
 
-def process_video(video_path, model_path):
-    # Initialize YOLO model
-    model = YOLO(model_path)
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
+socketio = SocketIO(app)
 
-    # Open the video capture
-    cap = cv2.VideoCapture(video_path)
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-    # Check if the video opened successfully
-    if not cap.isOpened():
-        st.error("Error opening video file")
-        return []
+@app.route('/upload_video', methods=['POST'])
+def upload_video():
+    if 'video' not in request.files:
+        return jsonify(success=False), 400
 
-    # Get the frame rate of the video
-    fps = cap.get(cv2.CAP_PROP_FPS)
+    video_file = request.files['video']
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+    video_file.save(temp_file.name)
 
-    # Calculate time between frames
-    time_difference = 1 / fps  # At constant frame rate
+    return jsonify(success=True, video_path=temp_file.name)
 
-    # Initialize a list to store dictionaries for each frame
-    frames_data = []
+@app.route('/upload_json', methods=['POST'])
+def upload_json():
+    if 'json' not in request.files:
+        return jsonify(success=False), 400
 
-    # Initialize variables for previous centroid and time
-    prev_centroid = None
-    prev_time = None
+    json_file = request.files['json']
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.json')
+    json_file.save(temp_file.name)
 
-    stframe = st.empty()
+    graphs = generate_graphs(temp_file.name)
+    return jsonify(success=True, graphs=graphs, json_path=temp_file.name)
 
-    # Process each frame in the video
-    for frame_num in range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))):
-        if st.session_state.stop:
-            break
+@app.route('/save_file', methods=['POST'])
+def save_file():
+    if 'json' not in request.files or 'format' not in request.form:
+        return jsonify(success=False), 400
 
-        ret, frame = cap.read()
-        if not ret:
-            break
+    json_file = request.files['json']
+    format = request.form['format']
+    original_json_name = json_file.filename
+    base_name = os.path.basename(original_json_name).replace('.json', '')
 
-        timer = cap.get(cv2.CAP_PROP_POS_MSEC)
-        seconds = timer / 1000
-        minutes, seconds = divmod(seconds, 60)
-        hours, minutes = divmod(minutes, 60)
-        formatted_time = f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}:{int((seconds - int(seconds)) * 1000):03d}"
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.json')
+    json_file.save(temp_file.name)
 
-        # Convert frame to PIL image for YOLO processing
-        img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    df = generate_dataframe(temp_file.name)
 
-        # Get results from YOLO model
-        results = model(img_pil)
-        result = results[0]
-        masks = result.masks
+    if format == 'csv':
+        path = save_csv(df, base_name)
+    elif format == 'excel':
+        path = save_excel(df, base_name)
+    else:
+        return jsonify(success=False), 400
 
-        # Initialize dictionary for current frame
-        frame_data = {
-            'frame_number': frame_num,
-            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S:%f'),
-            'video_timestamp': formatted_time,
-            'detected': masks is not None,
-            'centroids': [],
-            'velocity': [],
-            'distance': 0  
-        }
+    return jsonify(success=True, path=path)
 
-        # Check there are masks in the current frame to avoid errors
-        if masks is not None:
-            overlay = Image.new('RGBA', img_pil.size, (255, 255, 255, 0))
-            overlay_draw = ImageDraw.Draw(overlay)
+@socketio.on('start_video')
+def start_video(data):
+    video_path = data['video_path']
+    start_video_processing(video_path, socketio, emit)
 
-            for mask in masks:
-                polygon = mask.xy[0]
-                if len(polygon) >= 3:
-                    overlay_draw.polygon(polygon, outline=(0, 255, 0), fill=(0, 255, 0, 127))
+@socketio.on('stop_video')
+def stop_video():
+    frames_data = stop_video_processing()
+    json_path = save_json(frames_data)
+    graphs = generate_graphs(json_path)
 
-                    polygon_shapely = Polygon(polygon)
-                    centroid = polygon_shapely.centroid
-                    frame_data['centroids'].append((centroid.x, centroid.y))  # Append centroid coordinates to the list
-                    circle_radius = 5
-                    left_up_point = (centroid.x - circle_radius, centroid.y - circle_radius)
-                    right_down_point = (centroid.x + circle_radius, centroid.y + circle_radius)
-                    overlay_draw.ellipse([left_up_point, right_down_point], fill=(0, 0, 255))
+    df = generate_dataframe(json_path)
+    base_name = os.path.basename(json_path).replace('.json', '')
 
-                    # Calculate velocity using time difference
-                    if prev_centroid is not None:
-                        velocity_x = (centroid.x - prev_centroid[0]) / time_difference
-                        velocity_y = (centroid.y - prev_centroid[1]) / time_difference
-                        frame_data['velocity'] = [velocity_x, velocity_y]
-                    # Calculate distance between centroids in consecutive frames
-                        distance = np.sqrt((centroid.x - prev_centroid[0])**2 + (centroid.y - prev_centroid[1])**2)
-                        frame_data['distance'] = distance
-                else:
-                    frame_data['detected'] = False
+    csv_path = save_csv(df, base_name)
+    excel_path = save_excel(df, base_name)
 
-            img_pil = Image.alpha_composite(img_pil.convert("RGBA"), overlay)
-            
-            # Update previous centroid and time
-            prev_centroid = frame_data['centroids'][-1] if frame_data['centroids'] else None
-            prev_time = frame_num / fps
+    emit('saved', {
+        'message': f'Data saved to {json_path}, {csv_path}, and {excel_path}',
+        'graphs': graphs
+    })
 
-        # Add text overlay for frame number or timer
-        draw = ImageDraw.Draw(img_pil)
-        font = ImageFont.truetype("arial.ttf", 24)
-        draw.text((10, 10), str(formatted_time), (255, 255, 255), font=font)
+@app.route('/graphs/<filename>')
+def send_graph(filename):
+    return send_from_directory('Generated_data', filename)
 
-        frame = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
-        
-        # Display frame in Streamlit
-        stframe.image(frame, channels="BGR")
-
-        # Append frame data to frames_data list
-        frames_data.append(frame_data)
-
-    # Release the video capture
-    cap.release()
-
-    return frames_data
-
-def main():
-    st.title("Object Detection in Video")
-
-    if 'stop' not in st.session_state:
-        st.session_state.stop = False
-
-    model_path = st.text_input("Enter the path to your YOLO model weights:", 'Train_data/segment/train4/weights/best.pt')
-    video_file = st.file_uploader("Upload a video file", type=["mp4", "avi", "mov", "mkv"])
-
-    if video_file is not None and model_path:
-        tfile = tempfile.NamedTemporaryFile(delete=False)
-        tfile.write(video_file.read())
-        video_path = tfile.name
-
-        if st.button("Process Video"):
-            st.session_state.stop = False
-            frames_data = process_video(video_path, model_path)
-
-            output_dir = 'Generated_data'
-            os.makedirs(output_dir, exist_ok=True)
-
-            file_name = 'Fish_data.json'
-            output_path = os.path.join(output_dir, file_name)
-
-            # Check if the file already exists
-            file_exists = os.path.isfile(output_path)
-
-            if file_exists:
-                # If the file exists, find a unique name by adding a number at the end
-                file_count = 1
-                while True:
-                    new_file_name = f'Fish_data_{file_count}.json'
-                    new_output_path = os.path.join(output_dir, new_file_name)
-                    if not os.path.isfile(new_output_path):
-                        output_path = new_output_path
-                        break
-                    file_count += 1
-
-            with open(output_path, 'w', encoding='utf-8') as f:
-                json.dump(frames_data, f, ensure_ascii=False, indent=4)
-
-            st.success(f"Data exported to {output_path}")
-
-        st.sidebar.button("Stop Processing", on_click=lambda: setattr(st.session_state, 'stop', True))
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    socketio.run(app, debug=True)

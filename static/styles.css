@@ -1,0 +1,38 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #f8f9fa;
+}
+#banner {
+    width: 60%;
+    height: auto;
+    margin: 20px 0;
+}
+#video-frame {
+    width: 75%;
+    height: auto;
+    margin: 20px auto;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: width 0.3s ease;
+}
+#controls {
+    margin-top: 20px;
+}
+.graph-container {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.graph-container img {
+    width: 100%;
+    max-width: 640px;
+    height: auto;
+    margin: 10px;
+}
+.spinner-border {
+    display: none;
+    margin: 20px auto;
+}
