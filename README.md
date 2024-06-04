@@ -17,7 +17,15 @@ The following steps indicate how to set up the code on a local machine.
 ```bash
    cd your/path/to/project
 ```
-2. It is highly recommended to create a virtual environment (although optional), for this make sure venv is installed or install it from terminal
+2. Clone this repository
+```bash
+   git clone https://github.com/rodhervan/guppyTracker
+```
+3. Navigate to the project directory
+```bash
+   cd  guppyTracker
+```
+4. It is highly recommended to create a virtual environment (although optional), for this make sure venv is installed or install it from terminal
 ```bash
    pip install virtualenv
 ```
@@ -25,14 +33,6 @@ Create the virtual environment and activate it
 ```bash
    python -m venv guppyEnv
    guppyEnv\Scripts\activate
-```
-3. Clone this repository
-```bash
-   git clone https://github.com/rodhervan/guppyTracker
-```
-3. Navigate to the project directory
-```bash
-   cd  guppyTracker
 ```
 - (OPTIONAL) If using a CUDA GPU to speed up the inference time, make sure to install the corresponding pytorch library. For example for CUDA version 11.8 execute the command:
 ```bash
