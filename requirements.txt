@@ -5,6 +5,5 @@ scipy
 pandas
 shapely
 ultralytics
-streamlit
 pillow
 openpyxl
